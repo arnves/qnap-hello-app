@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  hello-app:
+    image: ghcr.io/arnves/qnap-hello-app:${IMAGE_TAG:-latest}
+    container_name: qnap-hello-app-instance
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # QNAP_HOST_PORT:CONTAINER_PORT
+    environment:
+      APP_VERSION: ${IMAGE_TAG:-latest}
+    networks:
+      - app-network
+    labels:
+      # Traefik labels - will be used later
+      - "traefik.enable=true"
+      - "traefik.http.routers.qnap-hello-app.rule=Host(`hello.yourdomain.com`)"
+      - "traefik.http.services.qnap-hello-app.loadbalancer.server.port=3000"
+      # Add more Traefik labels later for TLS and entrypoints
+
+networks:
+  app-network: {} # This app will use its own network for now
