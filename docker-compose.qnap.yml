@@ -10,13 +10,22 @@ services:
     environment:
       APP_VERSION: ${IMAGE_TAG:-latest}
     networks:
-      - app-network
+      - traefik-public
     labels:
       # Traefik labels - will be used later
       - "traefik.enable=true"
+      # Router configuration for demo.arnves.net
       - "traefik.http.routers.qnap-hello-app.rule=Host(`demo.arnves.net`)"
-      - "traefik.http.services.qnap-hello-app.loadbalancer.server.port=3000"
-      # Add more Traefik labels later for TLS and entrypoints
+      - "traefik.http.routers.qnap-hello-app.entrypoints=websecure" # Use the HTTPS entrypoint
+      - "traefik.http.routers.qnap-hello-app.service=qnap-hello-app-svc" # Link to the service definition below
+      - "traefik.http.routers.qnap-hello-app.tls=true" # Enable TLS
+      - "traefik.http.routers.qnap-hello-app.tls.certresolver=letsencrypt" # Use your Let's Encrypt resolver
+      # - "traefik.http.routers.qnap-hello-app.middlewares=security-headers@file" # Optional: apply default security headers
+
+      # Service definition (how Traefik finds your app)
+      - "traefik.http.services.qnap-hello-app-svc.loadbalancer.server.port=3000"
+            # Add more Traefik labels later for TLS and entrypoints
 
 networks:
-  app-network: {} # This app will use its own network for now
+  traefik-public: 
+    external: true 
