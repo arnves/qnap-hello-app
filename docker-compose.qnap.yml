@@ -14,7 +14,7 @@ services:
     labels:
       # Traefik labels - will be used later
       - "traefik.enable=true"
-      - "traefik.http.routers.qnap-hello-app.rule=Host(`hello.yourdomain.com`)"
+      - "traefik.http.routers.qnap-hello-app.rule=Host(`demo.arnves.net`)"
       - "traefik.http.services.qnap-hello-app.loadbalancer.server.port=3000"
       # Add more Traefik labels later for TLS and entrypoints
 
