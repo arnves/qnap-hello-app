@@ -56,7 +56,7 @@ jobs:
   deploy-to-qnap:
     name: Deploy to QNAP
     needs: build-and-push # Run this job only after build-and-push is successful
-    runs-on: self-hosted, qnap-deployer # Target your QNAP runner with the 'qnap-deployer' label
+    runs-on: self-hosted # Target your QNAP runner with the 'qnap-deployer' label
 
     steps:
       - name: Checkout repository
