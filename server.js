@@ -3,7 +3,7 @@ const app = express();
 const port = 3000; // The port inside the container
 
 app.get('/', (req, res) => {
-  const appVersion = process.env.APP_VERSION || "1.0.1";
+  const appVersion = process.env.APP_VERSION || "1.0.2";
   res.send(`Hello again from QNAP! Version: ${appVersion} - Deployed at: ${new Date().toISOString()}`);
 });
 
