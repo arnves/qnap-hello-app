@@ -6,7 +6,7 @@ services:
     container_name: qnap-hello-app-instance
     restart: unless-stopped
     ports:
-      - "3000:3000" # QNAP_HOST_PORT:CONTAINER_PORT
+      - "3001:3000" # QNAP_HOST_PORT:CONTAINER_PORT
     environment:
       APP_VERSION: ${IMAGE_TAG:-latest}
     networks:
