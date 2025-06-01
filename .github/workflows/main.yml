@@ -1,0 +1,90 @@
+name: Build and Deploy qnap-hello-app
+
+on:
+  push:
+    branches:
+      - main # Trigger on pushes to the main branch
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  # Construct the image name using GitHub variables
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+
+jobs:
+  build-and-push:
+    name: Build and Push to GHCR
+    runs-on: ubuntu-latest # Use GitHub-hosted runner for building
+    permissions:
+      contents: read
+      packages: write # Needed to push to GHCR
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }} # or github.repository_owner
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+
+  deploy-to-qnap:
+    name: Deploy to QNAP
+    needs: build-and-push # Run this job only after build-and-push is successful
+    runs-on: self-hosted, qnap-deployer # Target your QNAP runner with the 'qnap-deployer' label
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Checks out the repo on the QNAP runner
+
+      - name: Login to GHCR (on QNAP runner for pulling)
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set Image Tag Environment Variable for Compose
+        # Use the commit SHA for a specific version.
+        # The 'sha-' prefix is added by the docker/metadata-action in the build job
+        # GITHUB_SHA is the full commit SHA, slice it for the short version if 'meta' output isn't directly usable here
+        run: echo "IMAGE_TAG=sha-${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Deploy Application on QNAP
+        env:
+          # IMAGE_TAG is now available from $GITHUB_ENV set in the previous step
+          DOCKER_HOST: "unix:///var/run/docker.sock" # Usually default, but explicit
+        run: |
+          echo "Deploying with image tag: ${{ env.IMAGE_TAG }}"
+          # Ensure you use the correct docker compose command version
+          # If your QNAP runner's Docker install uses Compose V2 (docker compose)
+          docker compose -f docker-compose.qnap.yml pull
+          docker compose -f docker-compose.qnap.yml up -d --remove-orphans
+
+          # If your QNAP runner's Docker install uses Compose V1 (docker-compose)
+          # docker-compose -f docker-compose.qnap.yml pull
+          # docker-compose -f docker-compose.qnap.yml up -d --remove-orphans
+
+          echo "Cleaning up old images..."
+          docker image prune -af
